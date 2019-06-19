@@ -125,13 +125,15 @@ extension UILabel {
 // MARK: - Class _LabelHighlightControl
 
 fileprivate class _LabelHighlightControl: UIView {
+    /// 共享数据
+    let share = _LabelHighlightWindow.share
     
     // MARK: - Struct Item
     
     struct Item: Equatable {
         let range: NSRange
-        let highlightColor: UIColor?
-        let backgroundColor: UIColor?
+        let hColor: UIColor?
+        let bColor: UIColor?
         let tag: Int
         
         static func == (lhs: Item, rhs: Item) -> Bool {
@@ -149,16 +151,13 @@ fileprivate class _LabelHighlightControl: UIView {
     private var items = [Item]()
     private var isHighlighting = false
     private var isChangeSelf = false
-    private let textStorage = NSTextStorage()
     private var wholeText: NSMutableAttributedString?
     private var touchedText: NSAttributedString?
     private var touchedItem: Item?
-    private var textBounds: CGRect = .zero
     private var tapGesture: UITapGestureRecognizer {
         return gestureRecognizers!.first as! UITapGestureRecognizer
     }
     private var touchesTimestamp = 0.0
-    
     
     // MARK: - Public Methods
     
@@ -174,7 +173,7 @@ fileprivate class _LabelHighlightControl: UIView {
         }
         setText().attributedText = attributedText
         
-        let item = Item(range: range, highlightColor: highlightColor, backgroundColor: backgroundColor, tag: tag)
+        let item = Item(range: range, hColor: highlightColor, bColor: backgroundColor, tag: tag)
         items.removeAll { $0 == item }
         items.append(item)
     }
@@ -195,12 +194,6 @@ fileprivate class _LabelHighlightControl: UIView {
     }
     
     func _init() -> _LabelHighlightControl {
-        let layoutManager = NSLayoutManager()
-        let textContainer = NSTextContainer()
-        textContainer.lineFragmentPadding = 0
-        layoutManager.addTextContainer(textContainer)
-        textStorage.addLayoutManager(layoutManager)
-        
         highlight = LabelHighlight()
         highlight.control = self
         
@@ -219,93 +212,14 @@ fileprivate class _LabelHighlightControl: UIView {
         return label
     }
     
-    private func prepareForTouches() {
-        let layoutManager = textStorage.layoutManagers.first!
-        let textContainer = layoutManager.textContainers.first!
-        /*
-         textContainer.size 的设置，我看过的所有开源框架都是使用 bounds.size，因为绝大部分框架都是自己渲染文本，所以没有问题，但是我发现有些文案的渲染使用 layoutManager 和 UILabel 显示的不一样。比如：模拟器 iPhone 6, label frame （0，0，view.width，200），numberOfLines = 0， text = "这是一个支持高亮的 UILabel 的扩展。欢迎使用。" 时，UILabel 的“使用。”会换行，左边的空间还很多，而 layoutManager 的“用。”会换行。
-         目前没有找到原因。不过找了一个可能的解决方案：
-         size 的设置使用 UILabel 的 textRect 的size 就可以了。
-         简单的测试了一下没有发现问题。
-         */
-        /*
-         单纯的使用 textRect 还是有问题，当 label 的高度固定，装不下全部的 text 时，最后一行会出现问题。因为最后一行一般都需要显示 ...。所以需要区分两种情况：1. 当 label 的内容可以全部显示时使用 textRect，显示不全时使用 bounds
-         */
-        let contentSize = label.intrinsicContentSize
-        let boundsSize = label.bounds.size
-        let textRect = label.textRect(forBounds: label.bounds, limitedToNumberOfLines: label.numberOfLines)
-        if textRect.origin.y == 0 { print("小于0") }
-        print(contentSize)
-        print(boundsSize)
-        print(textRect)
-        if contentSize.height < boundsSize.height {
-            textContainer.size = contentSize
-        } else {
-            textContainer.size = boundsSize
-        }
-//        textContainer.size = bounds.size
-        textContainer.maximumNumberOfLines = label.numberOfLines
-        // 设置这里的 lineMode 是有效的，不会按照 attributedString 里的来，不知道为啥。
-        textContainer.lineBreakMode = label.lineBreakMode
-        // 设置字符串前先设置 textContainer，这样 layoutManager 才会在计算布局时把 textContainer 的配置计算进去
-        textStorage.setAttributedString(convertLabelTextToLayout())
-        textBounds = layoutManager.usedRect(for: textContainer)
-        wholeText = NSMutableAttributedString(attributedString: label.attributedText!)
-    }
-    
-    private func convertLabelTextToLayout() -> NSAttributedString {
-        let text = label.attributedText!
-        setText().text = nil
-        setText().text = text.string
-        let attributedText = NSMutableAttributedString(attributedString: label.attributedText!)
-        setText().attributedText = text
-        let fullRange = NSRange(location: 0, length: text.length)
-        text.enumerateAttributes(in: fullRange, options: .longestEffectiveRangeNotRequired) { (attributes, range, stop) in
-            attributedText.addAttributes(attributes, range: range)
-        }
-        NSAttributedString(attributedString: attributedText).enumerateAttribute(.paragraphStyle, in: fullRange, options: .longestEffectiveRangeNotRequired) { (p, range, stop) in
-            let p = p as! NSParagraphStyle
-            /* 关于 lineBreakMode。
-             当为除了CharWrapping 和 WordWrapping 的其他 mode 时，使用 layoutManager 只能渲染一行。不知道为什么会这样！！！！
-             目前只能暂时把其他 mode 都改为 WordWrapping。
-             这样可能会导致最后一行显示不全时，出现 ... 时会出现位置计算不精确的问题。不过这种情况不多见。
-             */
-            switch p.lineBreakMode {
-            case .byCharWrapping, .byWordWrapping: return
-            default:
-                let newP = NSMutableParagraphStyle()
-                newP.setParagraphStyle(p)
-                newP.lineBreakMode = .byWordWrapping
-                attributedText.addAttribute(.paragraphStyle, value: newP, range: range)
-            }
-        }
-        return attributedText
-    }
-    
-    private func getItem(at point: CGPoint) -> Item? {
-        let point = convertPointToLayout(point)
-        guard textBounds.contains(point) else { return nil }
-        let layoutManager = textStorage.layoutManagers.first!
-        let index = layoutManager.glyphIndex(for: point, in: layoutManager.textContainers.first!)
-        for item in items.reversed() {
-            if item.range.contains(index) { return item }
-        }
-        return nil
-    }
-    
-    private func convertPointToLayout(_ point: CGPoint) -> CGPoint {
-        let textOffsetY = (bounds.height - textBounds.height) / 2
-        return CGPoint(x: point.x, y: point.y - textOffsetY)
-    }
-    
     private func showHighlight(_ item: Item) {
         if isHighlighting { return }
         isHighlighting = true
         let text = NSMutableAttributedString(attributedString: touchedText!)
-        if let hColor = (item.highlightColor ?? highlight.highlightColor) {
+        if let hColor = (item.hColor ?? highlight.highlightColor) {
             text.addAttribute(.foregroundColor, value: hColor, range: NSRange(location: 0, length: text.length))
         }
-        if let bColor = (item.backgroundColor ?? highlight.backgroundColor) {
+        if let bColor = (item.bColor ?? highlight.backgroundColor) {
             text.addAttribute(.backgroundColor, value: bColor, range: NSRange(location: 0, length: text.length))
         }
         wholeText!.replaceCharacters(in: item.range, with: text)
@@ -371,10 +285,10 @@ fileprivate class _LabelHighlightControl: UIView {
             super.touchesEnded(touches, with: event)
             return
         }
+        hideHighlight(item)
         let point = touches.first!.location(in: label)
         guard getItem(at: point) == item else { return }
         highlight.tapAction?(label, touchedText!, item.range, item.tag)
-        hideHighlight(item)
     }
     
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -390,5 +304,89 @@ fileprivate class _LabelHighlightControl: UIView {
     
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
         isChangeSelf ? isChangeSelf = false : reset()
+    }
+    
+    
+    //////
+    
+    private func getItem(at point: CGPoint) -> Item? {
+        guard bounds.contains(point) else { return nil }
+        let itemIndex = itemIndexAt(point)
+        guard itemIndex > -1 else { return nil }
+        return items[itemIndex]
+    }
+    
+    func itemIndexAt(_ point: CGPoint) -> Int {
+        let colorValue = colorValueAt(point)
+        return (colorValue.b == 255 ? colorValue.r : 0) - 1
+    }
+    
+    func colorValueAt(_ point: CGPoint) -> (r: Int, g: Int, b: Int) {
+        // 用来存放目标像素值
+        var pixel = [UInt8](repeatElement(0, count: 4))
+        // 颜色空间为 RGB，这决定了输出颜色的编码是 RGB 还是其他（比如 YUV）
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        
+        // 设置位图颜色分布为 RGBA
+        let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
+        let context = CGContext(data: &pixel, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: colorSpace, bitmapInfo: bitmapInfo)!
+        // 设置 context 原点偏移为目标位置所有坐标
+        context.translateBy(x: -point.x, y: -point.y)
+        // 将图像渲染到 context 中
+        share.labelCopy.layer.render(in: context)
+        return (Int(pixel[0]), Int(pixel[1]), Int(pixel[2]))
+    }
+    
+    private func convertTextToLabelCopy(_ text: NSAttributedString) -> NSAttributedString {
+        setText().text = nil
+        setText().text = text.string
+        let attributedText = NSMutableAttributedString(attributedString: label.attributedText!)
+        setText().attributedText = text
+        let fullRange = NSRange(location: 0, length: text.length)
+        text.enumerateAttributes(in: fullRange, options: .longestEffectiveRangeNotRequired) { (attributes, range, stop) in
+            attributedText.addAttributes(attributes, range: range)
+        }
+        attributedText.addAttribute(.foregroundColor, value: UIColor.black, range: fullRange)
+        items.enumerated().forEach { (offset, item) in
+            let color = self.getColor(offset + 1)
+            attributedText.addAttribute(.foregroundColor, value: color, range: item.range)
+            attributedText.addAttribute(.backgroundColor, value: color, range: item.range)
+        }
+        return attributedText
+    }
+    
+    private func getColor(_ value: Int) -> UIColor {
+        // 256 个高亮配置应该够了吧。。。
+        return UIColor(red: CGFloat(value) / 255, green: 0, blue: 1, alpha: 1)
+    }
+    
+    private func prepareForTouches() {
+        let text = label.attributedText!
+        wholeText = NSMutableAttributedString(attributedString: text)
+        share.labelCopy.numberOfLines = label.numberOfLines
+        share.labelCopy.frame = bounds.offsetBy(dx: UIScreen.main.bounds.width, dy: 0)
+        share.labelCopy.attributedText = convertTextToLabelCopy(text)
+    }
+}
+
+fileprivate class _LabelHighlightWindow: UIWindow {
+    private static weak var instance: _LabelHighlightWindow?
+    static var share: _LabelHighlightWindow {
+        if let i = instance {
+            return i
+        } else {
+            let wd = self.init()
+            wd.frame = .zero
+            let label = UILabel()
+            label.backgroundColor = .black
+            label.tag = 1
+            wd.addSubview(label)
+            instance = wd
+            return wd
+        }
+    }
+    var labelCopy: UILabel {
+        isHidden = false
+        return viewWithTag(1) as! UILabel
     }
 }
