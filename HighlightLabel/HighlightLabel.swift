@@ -231,19 +231,18 @@ fileprivate class _LabelHighlightControl: UIView {
         /*
          单纯的使用 textRect 还是有问题，当 label 的高度固定，装不下全部的 text 时，最后一行会出现问题。因为最后一行一般都需要显示 ...。所以需要区分两种情况：1. 当 label 的内容可以全部显示时使用 textRect，显示不全时使用 bounds
          */
-        let contentSize = label.intrinsicContentSize
-        let boundsSize = label.bounds.size
-        let textRect = label.textRect(forBounds: label.bounds, limitedToNumberOfLines: label.numberOfLines)
-        if textRect.origin.y == 0 { print("小于0") }
-        print(contentSize)
-        print(boundsSize)
-        print(textRect)
-        if contentSize.height < boundsSize.height {
-            textContainer.size = contentSize
-        } else {
-            textContainer.size = boundsSize
-        }
-//        textContainer.size = bounds.size
+        /*
+         无法精准区分显示全或不全的情况，所以该方案暂时放弃！！！！！
+         */
+        let textWidth = label.textRect(forBounds: bounds, limitedToNumberOfLines: label.numberOfLines).width
+        textContainer.size = CGSize(width: textWidth, height: bounds.height)
+//        if textRect.origin.y.sign == .plus {
+//            textContainer.size = textRect.size
+//        } else {
+//            textContainer.size = bounds.size
+//        }
+//        print(textRect)
+//        print(bounds)
         textContainer.maximumNumberOfLines = label.numberOfLines
         // 设置这里的 lineMode 是有效的，不会按照 attributedString 里的来，不知道为啥。
         textContainer.lineBreakMode = label.lineBreakMode
@@ -362,6 +361,7 @@ fileprivate class _LabelHighlightControl: UIView {
             return
         }
         let point = touches.first!.location(in: label)
+        print(point.debugDescription + "\(getItem(at: point) == item)")
         getItem(at: point) == item ? showHighlight(item) : hideHighlight(item)
     }
     
