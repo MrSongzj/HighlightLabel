@@ -318,6 +318,7 @@ fileprivate class _LabelHighlightControl: UIView {
     
     func itemIndexAt(_ point: CGPoint) -> Int {
         let colorValue = colorValueAt(point)
+        print("\(point) - \(colorValue)")
         return (colorValue.b == 255 ? colorValue.r : 0) - 1
     }
     
@@ -346,10 +347,11 @@ fileprivate class _LabelHighlightControl: UIView {
         text.enumerateAttributes(in: fullRange, options: .longestEffectiveRangeNotRequired) { (attributes, range, stop) in
             attributedText.addAttributes(attributes, range: range)
         }
-        attributedText.addAttribute(.foregroundColor, value: UIColor.black, range: fullRange)
+        attributedText.addAttribute(.foregroundColor, value: UIColor.clear, range: fullRange)
+        attributedText.addAttribute(.backgroundColor, value: UIColor.black, range: NSRange(location: attributedText.length - 1, length: 1))
         items.enumerated().forEach { (offset, item) in
             let color = self.getColor(offset + 1)
-            attributedText.addAttribute(.foregroundColor, value: color, range: item.range)
+//            attributedText.addAttribute(.foregroundColor, value: UIColor.clear, range: item.range)
             attributedText.addAttribute(.backgroundColor, value: color, range: item.range)
         }
         return attributedText
@@ -364,7 +366,8 @@ fileprivate class _LabelHighlightControl: UIView {
         let text = label.attributedText!
         wholeText = NSMutableAttributedString(attributedString: text)
         share.labelCopy.numberOfLines = label.numberOfLines
-        share.labelCopy.frame = bounds.offsetBy(dx: UIScreen.main.bounds.width, dy: 0)
+//        share.labelCopy.frame = bounds.offsetBy(dx: UIScreen.main.bounds.width, dy: 0)
+        share.labelCopy.frame = bounds.offsetBy(dx: 0, dy: 300)
         share.labelCopy.attributedText = convertTextToLabelCopy(text)
     }
 }
