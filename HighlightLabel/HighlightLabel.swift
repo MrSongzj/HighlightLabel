@@ -126,7 +126,7 @@ extension UILabel {
 
 fileprivate class _LabelHighlightControl: UIView {
     /// 共享数据
-    let share = _LabelHighlightWindow.share
+    lazy var share = _LabelHighlightWindow.share
     
     // MARK: - Struct Item
     
@@ -351,7 +351,6 @@ fileprivate class _LabelHighlightControl: UIView {
         attributedText.addAttribute(.backgroundColor, value: UIColor.black, range: NSRange(location: attributedText.length - 1, length: 1))
         items.enumerated().forEach { (offset, item) in
             let color = self.getColor(offset + 1)
-//            attributedText.addAttribute(.foregroundColor, value: UIColor.clear, range: item.range)
             attributedText.addAttribute(.backgroundColor, value: color, range: item.range)
         }
         return attributedText
@@ -366,8 +365,8 @@ fileprivate class _LabelHighlightControl: UIView {
         let text = label.attributedText!
         wholeText = NSMutableAttributedString(attributedString: text)
         share.labelCopy.numberOfLines = label.numberOfLines
-//        share.labelCopy.frame = bounds.offsetBy(dx: UIScreen.main.bounds.width, dy: 0)
-        share.labelCopy.frame = bounds.offsetBy(dx: 0, dy: 300)
+        share.labelCopy.frame = bounds.offsetBy(dx: UIScreen.main.bounds.width, dy: 0)
+//        share.labelCopy.frame = bounds.offsetBy(dx: 0, dy: 300)
         share.labelCopy.attributedText = convertTextToLabelCopy(text)
     }
 }
@@ -379,6 +378,7 @@ fileprivate class _LabelHighlightWindow: UIWindow {
             return i
         } else {
             let wd = self.init()
+            wd.isHidden = false
             wd.frame = .zero
             let label = UILabel()
             label.backgroundColor = .black
@@ -389,7 +389,10 @@ fileprivate class _LabelHighlightWindow: UIWindow {
         }
     }
     var labelCopy: UILabel {
-        isHidden = false
         return viewWithTag(1) as! UILabel
+    }
+    
+    deinit {
+        print("wd deinit")
     }
 }

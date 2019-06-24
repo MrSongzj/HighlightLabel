@@ -22,19 +22,54 @@ class ViewController: UIViewController {
         label.backgroundColor = .orange
 //        label.text = "这是一个支持高亮的 UILabel 的扩展。欢迎使用。这是一个支持高亮的 UILabel 的扩展。欢迎使用。这是一个支持高亮的 UILabel 的扩展。这是一个支持高亮的 UILabel 的扩展。欢迎使用。这是一个支持高亮的 UILabel 的扩展。欢迎使用。"
         let attText = NSMutableAttributedString(string: "这是一个支持高亮的 UILabel 的扩展。欢迎使用。这是一个支持高亮的 UILabel 的扩展。欢迎使用。这是一个支持高亮的 UILabel 的扩展。这是一个支持高亮的 UILabel 的扩展。欢迎使用。这是一个支持高亮的 UILabel 的扩展。欢迎使用。")
-        attText.addAttribute(.backgroundColor, value: UIColor.purple, range: NSRange(location: 30, length: 1))
-        attText.addAttribute(.backgroundColor, value: UIColor.red, range: NSRange(location: 32, length: 1))
+//        attText.addAttribute(.backgroundColor, value: UIColor.purple, range: NSRange(location: 30, length: 1))
+//        attText.addAttribute(.backgroundColor, value: UIColor.red, range: NSRange(location: 32, length: 1))
         label.attributedText = attText
         label.numberOfLines = 0
         label.hl.color = .blue
         label.hl.highlightColor = UIColor.blue.withAlphaComponent(0.5)
         label.hl.backgroundColor = .lightGray
         label.font = UIFont.systemFont(ofSize: 35)
-        label.hl.set(string: "使用", at: 0)
-        label.hl.set(string: "。", at: 8)
+//        label.hl.set(string: "使", color: .green, backgroundColor: .green, at: 0)
+        label.hl.set(string: "用", color: .cyan, backgroundColor: .cyan, at: 0)
+        label.hl.set(string: "。", color: .yellow, backgroundColor: .yellow, at: 8)
         label.hl.setTapAction { (lb, string, range, tag) in
             print(string.string)
         }
+        
+        let lb = UILabel()
+        lb.numberOfLines = 0
+        var frame = label.frame.offsetBy(dx: 0, dy: 200)
+        frame.size.height = 300
+        lb.frame = frame
+        lb.text = label.text
+        lb.backgroundColor = .lightGray
+        lb.hl.backgroundColor = .purple
+        lb.hl.highlightColor = .yellow
+        lb.hl.color = .red
+        lb.hl.set(string: "扩展", at: 3)
+        lb.hl.setTapAction { (label, string, range, tag) in
+            print(string.string)
+        }
+        view.addSubview(lb)
+        
+        print(UIApplication.shared.windows.count)
+        callAfter(5) {
+            label.removeFromSuperview()
+            print("5秒")
+            print(UIApplication.shared.windows.count)
+            self.callAfter(5, block: {
+                lb.removeFromSuperview()
+                print("10秒")
+                self.callAfter(2, block: {
+                    print(UIApplication.shared.windows.count)
+                })
+            })
+        }
+    }
+    
+    func callAfter(_ time: Double, block: @escaping () -> Void) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + time, execute: block)
     }
 }
 
