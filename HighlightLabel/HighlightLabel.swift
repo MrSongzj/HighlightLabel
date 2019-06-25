@@ -212,6 +212,58 @@ fileprivate class _LabelHighlightControl: UIView {
         return label
     }
     
+    private func getItem(at point: CGPoint) -> Item? {
+        guard bounds.contains(point) else { return nil }
+        guard let index = itemIndexAt(point) else { return nil }
+        return items[index]
+    }
+    
+    private func itemIndexAt(_ point: CGPoint) -> Int? {
+        let colorValue = colorValueAt(point)
+        return colorValue.b == 255 ? colorValue.r : nil
+    }
+    
+    private func getColor(at index: Int) -> UIColor {
+        // 最多支持 256 个高亮配置。
+        return UIColor(red: CGFloat(index) / 255, green: 0, blue: 1, alpha: 1)
+    }
+    
+    private func colorValueAt(_ point: CGPoint) -> (r: Int, g: Int, b: Int) {
+        var pixel = [UInt8](repeatElement(0, count: 4))
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
+        let context = CGContext(data: &pixel, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: colorSpace, bitmapInfo: bitmapInfo)!
+        context.translateBy(x: -point.x, y: -point.y)
+        share.labelCopy.layer.render(in: context)
+        return (Int(pixel[0]), Int(pixel[1]), Int(pixel[2]))
+    }
+    
+    private func convertTextToLabelCopy(_ text: NSAttributedString) -> NSAttributedString {
+        setText().text = nil
+        setText().text = text.string
+        let attributedText = NSMutableAttributedString(attributedString: label.attributedText!)
+        setText().attributedText = text
+        let fullRange = NSRange(location: 0, length: text.length)
+        text.enumerateAttributes(in: fullRange, options: .longestEffectiveRangeNotRequired) { (attributes, range, stop) in
+            attributedText.addAttributes(attributes, range: range)
+        }
+        attributedText.addAttribute(.foregroundColor, value: UIColor.clear, range: fullRange)
+        attributedText.addAttribute(.backgroundColor, value: UIColor.black, range: fullRange)
+        items.enumerated().forEach { (offset, item) in
+            let color = self.getColor(at: offset)
+            attributedText.addAttribute(.backgroundColor, value: color, range: item.range)
+        }
+        return attributedText
+    }
+    
+    private func prepareForTouches() {
+        let text = label.attributedText!
+        wholeText = NSMutableAttributedString(attributedString: text)
+        share.labelCopy.numberOfLines = label.numberOfLines
+        share.labelCopy.frame = bounds.offsetBy(dx: UIScreen.main.bounds.width, dy: 0)
+        share.labelCopy.attributedText = convertTextToLabelCopy(text)
+    }
+    
     private func showHighlight(_ item: Item) {
         if isHighlighting { return }
         isHighlighting = true
@@ -305,70 +357,6 @@ fileprivate class _LabelHighlightControl: UIView {
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
         isChangeSelf ? isChangeSelf = false : reset()
     }
-    
-    
-    //////
-    
-    private func getItem(at point: CGPoint) -> Item? {
-        guard bounds.contains(point) else { return nil }
-        let itemIndex = itemIndexAt(point)
-        guard itemIndex > -1 else { return nil }
-        return items[itemIndex]
-    }
-    
-    func itemIndexAt(_ point: CGPoint) -> Int {
-        let colorValue = colorValueAt(point)
-        print("\(point) - \(colorValue)")
-        return (colorValue.b == 255 ? colorValue.r : 0) - 1
-    }
-    
-    func colorValueAt(_ point: CGPoint) -> (r: Int, g: Int, b: Int) {
-        // 用来存放目标像素值
-        var pixel = [UInt8](repeatElement(0, count: 4))
-        // 颜色空间为 RGB，这决定了输出颜色的编码是 RGB 还是其他（比如 YUV）
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        
-        // 设置位图颜色分布为 RGBA
-        let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
-        let context = CGContext(data: &pixel, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: colorSpace, bitmapInfo: bitmapInfo)!
-        // 设置 context 原点偏移为目标位置所有坐标
-        context.translateBy(x: -point.x, y: -point.y)
-        // 将图像渲染到 context 中
-        share.labelCopy.layer.render(in: context)
-        return (Int(pixel[0]), Int(pixel[1]), Int(pixel[2]))
-    }
-    
-    private func convertTextToLabelCopy(_ text: NSAttributedString) -> NSAttributedString {
-        setText().text = nil
-        setText().text = text.string
-        let attributedText = NSMutableAttributedString(attributedString: label.attributedText!)
-        setText().attributedText = text
-        let fullRange = NSRange(location: 0, length: text.length)
-        text.enumerateAttributes(in: fullRange, options: .longestEffectiveRangeNotRequired) { (attributes, range, stop) in
-            attributedText.addAttributes(attributes, range: range)
-        }
-        attributedText.addAttribute(.foregroundColor, value: UIColor.clear, range: fullRange)
-        attributedText.addAttribute(.backgroundColor, value: UIColor.black, range: NSRange(location: attributedText.length - 1, length: 1))
-        items.enumerated().forEach { (offset, item) in
-            let color = self.getColor(offset + 1)
-            attributedText.addAttribute(.backgroundColor, value: color, range: item.range)
-        }
-        return attributedText
-    }
-    
-    private func getColor(_ value: Int) -> UIColor {
-        // 256 个高亮配置应该够了吧。。。
-        return UIColor(red: CGFloat(value) / 255, green: 0, blue: 1, alpha: 1)
-    }
-    
-    private func prepareForTouches() {
-        let text = label.attributedText!
-        wholeText = NSMutableAttributedString(attributedString: text)
-        share.labelCopy.numberOfLines = label.numberOfLines
-        share.labelCopy.frame = bounds.offsetBy(dx: UIScreen.main.bounds.width, dy: 0)
-//        share.labelCopy.frame = bounds.offsetBy(dx: 0, dy: 300)
-        share.labelCopy.attributedText = convertTextToLabelCopy(text)
-    }
 }
 
 fileprivate class _LabelHighlightWindow: UIWindow {
@@ -390,9 +378,5 @@ fileprivate class _LabelHighlightWindow: UIWindow {
     }
     var labelCopy: UILabel {
         return viewWithTag(1) as! UILabel
-    }
-    
-    deinit {
-        print("wd deinit")
     }
 }

@@ -31,7 +31,7 @@ class ViewController: UIViewController {
         label.hl.backgroundColor = .lightGray
         label.font = UIFont.systemFont(ofSize: 35)
 //        label.hl.set(string: "使", color: .green, backgroundColor: .green, at: 0)
-        label.hl.set(string: "用", color: .cyan, backgroundColor: .cyan, at: 0)
+        label.hl.set(string: "U", color: .cyan, backgroundColor: .cyan, at: 0)
         label.hl.set(string: "。", color: .yellow, backgroundColor: .yellow, at: 8)
         label.hl.setTapAction { (lb, string, range, tag) in
             print(string.string)
@@ -54,22 +54,6 @@ class ViewController: UIViewController {
         view.addSubview(lb)
         
         print(UIApplication.shared.windows.count)
-        callAfter(5) {
-            label.removeFromSuperview()
-            print("5秒")
-            print(UIApplication.shared.windows.count)
-            self.callAfter(5, block: {
-                lb.removeFromSuperview()
-                print("10秒")
-                self.callAfter(2, block: {
-                    print(UIApplication.shared.windows.count)
-                })
-            })
-        }
-    }
-    
-    func callAfter(_ time: Double, block: @escaping () -> Void) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + time, execute: block)
     }
 }
 
