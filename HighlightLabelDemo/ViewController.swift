@@ -10,59 +10,36 @@ import UIKit
 import HighlightLabel
 
 class ViewController: UIViewController {
+    @IBOutlet weak var label: UILabel!
     
-//    @IBOutlet weak var label: UILabel!
-    
-    @objc func tapView() {
-        print("hehe")
-    }
-
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let tapGes = UITapGestureRecognizer(target: self, action: #selector(tapView))
-//        view.addGestureRecognizer(tapGes)
+        let tap = UITapGestureRecognizer(target: self, action: #selector(tapView))
+        label.isUserInteractionEnabled = true
+        label.addGestureRecognizer(tap)
         
-        let label = UILabel()
-        label.addGestureRecognizer(tapGes)
-        view.addSubview(label)
-        label.frame = CGRect(x: 0, y: 80, width: view.bounds.width, height: 121.7)
-
-        label.backgroundColor = .orange
-//        label.text = "这是一个支持高亮的 UILabel 的扩展。欢迎使用。这是一个支持高亮的 UILabel 的扩展。欢迎使用。这是一个支持高亮的 UILabel 的扩展。这是一个支持高亮的 UILabel 的扩展。欢迎使用。这是一个支持高亮的 UILabel 的扩展。欢迎使用。"
-        let attText = NSMutableAttributedString(string: "这是一个支持高亮的 UILabel 的扩展。欢迎使用。这是一个支持高亮的 UILabel 的扩展。欢迎使用。这是一个支持高亮的 UILabel 的扩展。这是一个支持高亮的 UILabel 的扩展。欢迎使用。这是一个支持高亮的 UILabel 的扩展。欢迎使用。")
-//        attText.addAttribute(.backgroundColor, value: UIColor.purple, range: NSRange(location: 30, length: 1))
-//        attText.addAttribute(.backgroundColor, value: UIColor.red, range: NSRange(location: 32, length: 1))
-        label.attributedText = attText
+        label.backgroundColor = .groupTableViewBackground
         label.numberOfLines = 0
+        // 必须先设置 text 或者 attributedText，因为高亮文本是基于完整文本的
+        label.text = "爱的魔力转圈圈。爱的魔力转圈圈。爱的魔力转圈圈。爱的魔力转圈圈。"
+        // 设置全局样式
         label.hl.color = .blue
-        label.hl.highlightColor = UIColor.blue.withAlphaComponent(0.5)
-        label.hl.backgroundColor = .lightGray
-        label.font = UIFont.systemFont(ofSize: 35)
-//        label.hl.set(string: "使", color: .green, backgroundColor: .green, at: 0)
-        label.hl.set(string: "U", color: .cyan, backgroundColor: .cyan, at: 0)
-        label.hl.set(string: "。", color: .yellow, backgroundColor: .yellow, at: 8)
-        label.hl.setTapAction { (lb, string, range, tag) in
-            print(string.string)
+        label.hl.highlightColor = .red
+        label.hl.backgroundColor = .yellow
+        // 设置高亮对象的多种姿势
+        label.hl.set(range: NSRange(location: 0, length: 2), color: .brown, highlightColor: .orange, backgroundColor: .clear, tag: 100)
+        // 如果有多个相同的文本，可以同过 at 参数指定具体的位置
+        label.hl.set(string: "转圈圈", color: .magenta, highlightColor: .red, backgroundColor: .clear, at: 3)
+        // 相同的标签可以使用 tag 来区分
+        label.hl.setMany(strings: ["魔力", "魔力"], tags: [0, 1])
+        // 设置点击事件
+        label.hl.setTapAction { (lb, attributedString, range, tag) in
+            print("文案:\(attributedString.string) 位置:\(range) 标签:\(tag)")
         }
-        
-        let lb = UILabel()
-        lb.numberOfLines = 0
-        var frame = label.frame.offsetBy(dx: 0, dy: 200)
-        frame.size.height = 300
-        lb.frame = frame
-        lb.text = label.text
-        lb.backgroundColor = .lightGray
-        lb.hl.backgroundColor = .purple
-        lb.hl.highlightColor = .yellow
-        lb.hl.color = .red
-        lb.hl.set(string: "扩展", at: 3)
-        lb.hl.setTapAction { (label, string, range, tag) in
-            print(string.string)
-        }
-        view.addSubview(lb)
-        
-        print(UIApplication.shared.windows.count)
+    }
+    
+    @objc func tapView() {
+        print("妈妈再也不用担心我们会冲突了😄\nMom doesn't have to worry we will conflict anymore😄")
     }
 }
-

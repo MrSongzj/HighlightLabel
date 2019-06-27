@@ -102,6 +102,18 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		82F3ECB922C4A8F60069FD2B /* Base */ = {
+			isa = PBXGroup;
+			children = (
+				BDF6F83A22B91DEC00A870CD /* Main.storyboard */,
+				BDF6F83622B91DEC00A870CD /* AppDelegate.swift */,
+				BDF6F83D22B91DEF00A870CD /* Assets.xcassets */,
+				BDF6F83F22B91DEF00A870CD /* LaunchScreen.storyboard */,
+				BDF6F84222B91DEF00A870CD /* Info.plist */,
+			);
+			name = Base;
+			sourceTree = "<group>";
+		};
 		BDF6F82A22B91DEC00A870CD = {
 			isa = PBXGroup;
 			children = (
@@ -125,12 +137,8 @@
 		BDF6F83522B91DEC00A870CD /* HighlightLabelDemo */ = {
 			isa = PBXGroup;
 			children = (
-				BDF6F83622B91DEC00A870CD /* AppDelegate.swift */,
+				82F3ECB922C4A8F60069FD2B /* Base */,
 				BDF6F83822B91DEC00A870CD /* ViewController.swift */,
-				BDF6F83A22B91DEC00A870CD /* Main.storyboard */,
-				BDF6F83D22B91DEF00A870CD /* Assets.xcassets */,
-				BDF6F83F22B91DEF00A870CD /* LaunchScreen.storyboard */,
-				BDF6F84222B91DEF00A870CD /* Info.plist */,
 			);
 			path = HighlightLabelDemo;
 			sourceTree = "<group>";
