@@ -12,10 +12,19 @@ import HighlightLabel
 class ViewController: UIViewController {
     
 //    @IBOutlet weak var label: UILabel!
+    
+    @objc func tapView() {
+        print("hehe")
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        let tapGes = UITapGestureRecognizer(target: self, action: #selector(tapView))
+//        view.addGestureRecognizer(tapGes)
+        
         let label = UILabel()
+        label.addGestureRecognizer(tapGes)
         view.addSubview(label)
         label.frame = CGRect(x: 0, y: 80, width: view.bounds.width, height: 121.7)
 

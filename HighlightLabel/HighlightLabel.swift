@@ -121,12 +121,9 @@ extension UILabel {
     }
 }
 
-
 // MARK: - Class _LabelHighlightControl
 
 fileprivate class _LabelHighlightControl: UIView {
-    /// 共享数据
-    lazy var share = _LabelHighlightWindow.share
     
     // MARK: - Struct Item
     
@@ -158,6 +155,8 @@ fileprivate class _LabelHighlightControl: UIView {
         return gestureRecognizers!.first as! UITapGestureRecognizer
     }
     private var touchesTimestamp = 0.0
+    /// 共享数据
+    private lazy var share = _LabelHighlightWindow.share
     
     // MARK: - Public Methods
     
@@ -264,9 +263,7 @@ fileprivate class _LabelHighlightControl: UIView {
         share.labelCopy.attributedText = convertTextToLabelCopy(text)
     }
     
-    private func showHighlight(_ item: Item) {
-        if isHighlighting { return }
-        isHighlighting = true
+    private func highlightedText(with item: Item) -> NSAttributedString {
         let text = NSMutableAttributedString(attributedString: touchedText!)
         if let hColor = (item.hColor ?? highlight.highlightColor) {
             text.addAttribute(.foregroundColor, value: hColor, range: NSRange(location: 0, length: text.length))
@@ -274,19 +271,40 @@ fileprivate class _LabelHighlightControl: UIView {
         if let bColor = (item.bColor ?? highlight.backgroundColor) {
             text.addAttribute(.backgroundColor, value: bColor, range: NSRange(location: 0, length: text.length))
         }
+        return text
+    }
+    
+    private func showHighlight(_ show: Bool, with item: Item) {
+        if isHighlighting == show { return }
+        isHighlighting = show
+        let text = show ? highlightedText(with: item) : touchedText!
         wholeText!.replaceCharacters(in: item.range, with: text)
         UIView.transition(with: label, duration: 0.15, options: .transitionCrossDissolve, animations: {
             self.setText().attributedText = self.wholeText
         })
     }
     
-    private func hideHighlight(_ item: Item) {
-        if isHighlighting == false { return }
-        isHighlighting = false
-        wholeText!.replaceCharacters(in: item.range, with: touchedText!)
-        UIView.transition(with: label, duration: 0.15, options: .transitionCrossDissolve, animations: {
-            self.setText().attributedText = self.wholeText
-        })
+    private func onHighlight(_ touches: Set<UITouch>) -> Bool {
+        guard let item = touchedItem else { return false }
+        let touch = touches.first!
+        switch touch.phase {
+        case .began: showHighlight(true, with: item)
+        case .moved:
+            let point = touch.location(in: label)
+            showHighlight(getItem(at: point) == item, with: item)
+        case .ended:
+            tapGesture.isEnabled = false
+            showHighlight(false, with: item)
+            let point = touch.location(in: label)
+            if getItem(at: point) == item {
+                highlight.tapAction?(label, touchedText!, item.range, item.tag)
+            }
+        case .cancelled:
+            tapGesture.isEnabled = false
+            showHighlight(false, with: item)
+        default: break
+        }
+        return true
     }
     
     private func reset() { items.removeAll() }
@@ -315,41 +333,23 @@ fileprivate class _LabelHighlightControl: UIView {
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let item = touchedItem else {
-            super.touchesBegan(touches, with: event)
-            return
-        }
-        showHighlight(item)
+        if onHighlight(touches) { return }
+        super.touchesBegan(touches, with: event)
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let item = touchedItem else {
-            super.touchesMoved(touches, with: event)
-            return
-        }
-        let point = touches.first!.location(in: label)
-        getItem(at: point) == item ? showHighlight(item) : hideHighlight(item)
+        if onHighlight(touches) { return }
+        super.touchesMoved(touches, with: event)
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        tapGesture.isEnabled = false
-        guard let item = touchedItem else {
-            super.touchesEnded(touches, with: event)
-            return
-        }
-        hideHighlight(item)
-        let point = touches.first!.location(in: label)
-        guard getItem(at: point) == item else { return }
-        highlight.tapAction?(label, touchedText!, item.range, item.tag)
+        if onHighlight(touches) { return }
+        super.touchesEnded(touches, with: event)
     }
     
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        tapGesture.isEnabled = false
-        guard let item = touchedItem else {
-            super.touchesCancelled(touches, with: event)
-            return
-        }
-        hideHighlight(item)
+        if onHighlight(touches) { return }
+        super.touchesCancelled(touches, with: event)
     }
     
     // MARK: - KVO
@@ -365,9 +365,8 @@ fileprivate class _LabelHighlightWindow: UIWindow {
         if let i = instance {
             return i
         } else {
-            let wd = self.init()
+            let wd = _LabelHighlightWindow(frame: .zero)
             wd.isHidden = false
-            wd.frame = .zero
             let label = UILabel()
             label.backgroundColor = .black
             label.tag = 1
